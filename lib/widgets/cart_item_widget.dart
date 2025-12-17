@@ -70,14 +70,14 @@ class CartItemWidget extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: 4),
-                  if (cartItem.selectedSize.isNotEmpty) ..[
+                  if (cartItem.selectedSize.isNotEmpty) ...<Widget>[
                     Text(
                       'Size: ${cartItem.selectedSize}',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     SizedBox(height: 2),
                   ],
-                  if (cartItem.selectedExtras.isNotEmpty) ..[
+                  if (cartItem.selectedExtras.isNotEmpty) ...<Widget>[
                     Text(
                       'Extras: ${cartItem.selectedExtras.join(', ')}',
                       style: Theme.of(context).textTheme.bodyMedium,
@@ -87,7 +87,7 @@ class CartItemWidget extends StatelessWidget {
                     SizedBox(height: 2),
                   ],
                   Text(
-                    '$${cartItem.unitPrice.toStringAsFixed(2)} each',
+                    '\$${cartItem.unitPrice.toStringAsFixed(2)} each',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   SizedBox(height: 8),
@@ -148,7 +148,7 @@ class CartItemWidget extends StatelessWidget {
                       ),
                       Spacer(),
                       Text(
-                        '$${cartItem.itemTotal.toStringAsFixed(2)}',
+                        '\$${cartItem.itemTotal.toStringAsFixed(2)}',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: AppConstants.primaryColor,
                           fontWeight: FontWeight.bold,

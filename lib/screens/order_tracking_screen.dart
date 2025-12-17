@@ -215,7 +215,7 @@ class OrderTrackingScreen extends StatelessWidget {
               'Ordered: ${timeFormat.format(order.orderTime)}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-            if (order.estimatedDelivery != null && isActive) ..[
+            if (order.estimatedDelivery != null && isActive) ...<Widget>[
               SizedBox(height: 4),
               Text(
                 'Estimated delivery: ${timeFormat.format(order.estimatedDelivery)}',
