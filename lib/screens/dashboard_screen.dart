@@ -1,172 +1,200 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../constants/app_constants.dart';
-import '../controllers/cart_controller.dart';
-import '../controllers/menu_controller.dart' as menu;
-import '../widgets/menu_item_card.dart';
-import '../widgets/category_tab.dart';
-import 'cart_screen.dart';
-import 'order_tracking_screen.dart';
+import 'package:get/get.dart';
+import 'package:cafe_culture/controllers/menu_controller.dart' as menu;
+import 'package:cafe_culture/controllers/cart_controller.dart';
+import 'package:cafe_culture/utils/constants.dart';
+import 'package:cafe_culture/widgets/menu_item_card.dart';
+import 'package:cafe_culture/widgets/category_tab.dart';
+import 'package:cafe_culture/screens/cart_screen.dart';
+import 'package:cafe_culture/screens/order_tracking_screen.dart';
 
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
-  
-  @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
+class DashboardScreen extends StatelessWidget {
+  final menu.MenuController menuController = Get.find();
+  final CartController cartController = Get.find();
+  final TextEditingController searchController = TextEditingController();
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          AppConstants.appName,
-          style: AppConstants.titleStyle.copyWith(fontSize: 22),
-        ),
+        title: Text(AppConstants.appName),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            icon: Icon(Icons.notifications_outlined),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const OrderTrackingScreen()),
+              Get.snackbar(
+                'Notifications',
+                'No new notifications',
+                duration: Duration(seconds: 2),
               );
             },
           ),
-          Consumer<CartController>(
-            builder: (context, cart, child) {
-              return Stack(
+          Obx(() => Stack(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.shopping_cart_outlined),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const CartScreen()),
-                      );
-                    },
+                    icon: Icon(Icons.shopping_cart_outlined),
+                    onPressed: () => Get.to(() => CartScreen()),
                   ),
-                  if (cart.itemCount > 0)
+                  if (cartController.cartCount > 0)
                     Positioned(
                       right: 8,
                       top: 8,
                       child: Container(
-                        padding: const EdgeInsets.all(2),
+                        padding: EdgeInsets.all(2),
                         decoration: BoxDecoration(
                           color: AppConstants.primaryColor,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        constraints: const BoxConstraints(
+                        constraints: BoxConstraints(
                           minWidth: 16,
                           minHeight: 16,
                         ),
                         child: Text(
-                          '${cart.itemCount}',
-                          style: const TextStyle(
+                          '${cartController.cartCount}',
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 12,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
                         ),
                       ),
                     ),
                 ],
-              );
-            },
-          ),
+              )),
+          SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(AppConstants.mediumPadding),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search menu items...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-                  borderSide: BorderSide.none,
+            color: Colors.white,
+            padding: EdgeInsets.all(AppConstants.defaultPadding),
+            child: Column(
+              children: [
+                TextField(
+                  controller: searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search menu items...',
+                    prefixIcon: Icon(Icons.search),
+                    suffixIcon: searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear),
+                            onPressed: () {
+                              searchController.clear();
+                              menuController.updateSearchQuery('');
+                            },
+                          )
+                        : null,
+                  ),
+                  onChanged: (value) {
+                    menuController.updateSearchQuery(value);
+                  },
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                SizedBox(height: 16),
+                Container(
+                  height: 40,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: AppConstants.categories.length,
+                    itemBuilder: (context, index) {
+                      final category = AppConstants.categories[index];
+                      return Obx(() => CategoryTab(
+                            category: category,
+                            isSelected: menuController.selectedCategory == category,
+                            onTap: () => menuController.updateCategory(category),
+                          ));
+                    },
+                  ),
                 ),
-              ),
-              onChanged: (query) {
-                context.read<menu.MenuController>().searchItems(query);
-              },
+              ],
             ),
           ),
-          Consumer<menu.MenuController>(
-            builder: (context, menuController, child) {
-              return Container(
-                height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: AppConstants.mediumPadding),
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: menuController.categories.length,
-                  itemBuilder: (context, index) {
-                    final category = menuController.categories[index];
-                    return CategoryTab(
-                      category: category,
-                      isSelected: category == menuController.selectedCategory,
-                      onTap: () => menuController.filterByCategory(category),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
           Expanded(
-            child: Consumer<menu.MenuController>(
-              builder: (context, menuController, child) {
-                if (menuController.filteredItems.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'No items found',
-                      style: AppConstants.subtitleStyle,
-                    ),
-                  );
-                }
-                
-                return GridView.builder(
-                  padding: const EdgeInsets.all(AppConstants.mediumPadding),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.75,
-                    crossAxisSpacing: AppConstants.mediumPadding,
-                    mainAxisSpacing: AppConstants.mediumPadding,
+            child: Obx(() {
+              if (menuController.filteredItems.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 64,
+                        color: Colors.grey,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'No items found',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Try adjusting your search or filter',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
                   ),
-                  itemCount: menuController.filteredItems.length,
-                  itemBuilder: (context, index) {
-                    return MenuItemCard(
-                      menuItem: menuController.filteredItems[index],
-                    );
-                  },
                 );
-              },
+              }
+
+              return GridView.builder(
+                padding: EdgeInsets.all(AppConstants.defaultPadding),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.75,
+                ),
+                itemCount: menuController.filteredItems.length,
+                itemBuilder: (context, index) {
+                  return MenuItemCard(
+                    menuItem: menuController.filteredItems[index],
+                  );
+                },
+              );
+            }),
+          ),
+          Container(
+            color: Colors.white,
+            padding: EdgeInsets.all(AppConstants.defaultPadding),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => Get.to(() => OrderTrackingScreen()),
+                    icon: Icon(Icons.track_changes),
+                    label: Text('Track Orders'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey.shade100,
+                      foregroundColor: AppConstants.textPrimary,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Obx(() => ElevatedButton.icon(
+                        onPressed: cartController.isEmpty
+                            ? null
+                            : () => Get.to(() => CartScreen()),
+                        icon: Icon(Icons.shopping_cart),
+                        label: Text(
+                          'Cart (${cartController.cartCount})',
+                        ),
+                      )),
+                ),
+              ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.all(AppConstants.smallPadding),
+            color: Colors.white,
+            padding: EdgeInsets.symmetric(
+              horizontal: AppConstants.defaultPadding,
+              vertical: 8,
+            ),
             child: Text(
-              '© 2024 ${AppConstants.appName}. All rights reserved.',
-              style: AppConstants.subtitleStyle.copyWith(
+              '© 2024 ${AppConstants.tagline}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontSize: 12,
-                color: Colors.grey,
               ),
               textAlign: TextAlign.center,
             ),

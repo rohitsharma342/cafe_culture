@@ -1,56 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../constants/app_constants.dart';
-import '../models/menu_item.dart';
-import '../screens/order_detail_screen.dart';
+import 'package:cafe_culture/models/menu_item.dart';
+import 'package:cafe_culture/screens/order_detail_screen.dart';
+import 'package:cafe_culture/utils/constants.dart';
 
 class MenuItemCard extends StatelessWidget {
   final MenuItem menuItem;
-  
-  const MenuItemCard({super.key, required this.menuItem});
-  
+
+  const MenuItemCard({Key? key, required this.menuItem}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+        borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
       ),
       child: InkWell(
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OrderDetailScreen(menuItem: menuItem),
-            ),
-          );
+          Get.to(() => OrderDetailScreen(menuItem: menuItem));
         },
-        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+        borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               flex: 3,
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppConstants.borderRadius),
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(AppConstants.cardBorderRadius),
                 ),
                 child: CachedNetworkImage(
                   imageUrl: menuItem.imageUrl,
                   width: double.infinity,
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
-                    color: Colors.grey[300],
-                    child: const Center(
+                    color: Colors.grey.shade200,
+                    child: Center(
                       child: CircularProgressIndicator(
-                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppConstants.primaryColor,
+                        ),
                       ),
                     ),
                   ),
                   errorWidget: (context, url, error) => Container(
-                    color: Colors.grey[300],
-                    child: const Icon(
-                      Icons.error_outline,
+                    color: Colors.grey.shade200,
+                    child: Icon(
+                      Icons.image_not_supported,
                       color: Colors.grey,
                     ),
                   ),
@@ -60,50 +58,54 @@ class MenuItemCard extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(AppConstants.smallPadding),
+                padding: EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       menuItem.name,
-                      style: AppConstants.titleStyle.copyWith(fontSize: 14),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Expanded(
                       child: Text(
                         menuItem.description,
-                        style: AppConstants.subtitleStyle.copyWith(
-                          fontSize: 12,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 8),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          '\$${menuItem.price.toStringAsFixed(2)}',
-                          style: AppConstants.priceStyle.copyWith(fontSize: 16),
+                        Expanded(
+                          child: Text(
+                            '\$${menuItem.price.toStringAsFixed(2)}',
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: AppConstants.primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
                             color: AppConstants.primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             menuItem.category,
                             style: TextStyle(
                               color: AppConstants.primaryColor,
                               fontSize: 10,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),

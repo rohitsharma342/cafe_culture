@@ -1,247 +1,277 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../constants/app_constants.dart';
-import '../controllers/cart_controller.dart';
-import '../models/menu_item.dart';
+import 'package:cafe_culture/models/menu_item.dart';
+import 'package:cafe_culture/controllers/cart_controller.dart';
+import 'package:cafe_culture/utils/constants.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final MenuItem menuItem;
-  
-  const OrderDetailScreen({super.key, required this.menuItem});
-  
+
+  const OrderDetailScreen({Key? key, required this.menuItem}) : super(key: key);
+
   @override
-  State<OrderDetailScreen> createState() => _OrderDetailScreenState();
+  _OrderDetailScreenState createState() => _OrderDetailScreenState();
 }
 
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
-  int quantity = 1;
-  final Map<String, CustomizationOption> selectedCustomizations = {};
+  final CartController cartController = Get.find();
   
+  int quantity = 1;
+  String selectedSize = '';
+  List<String> selectedExtras = [];
+  
+  double get basePrice => widget.menuItem.price;
+  double get sizePrice {
+    if (selectedSize == 'Large') return 0.50;
+    if (selectedSize == 'Medium') return 0.25;
+    return 0.0;
+  }
+  double get extrasPrice => selectedExtras.length * 0.50;
+  double get totalPrice => (basePrice + sizePrice + extrasPrice) * quantity;
+
   @override
   void initState() {
     super.initState();
-    for (var customization in widget.menuItem.customizations) {
-      if (customization.options.isNotEmpty) {
-        selectedCustomizations[customization.name] = customization.options.first;
-      }
+    if (widget.menuItem.sizes.isNotEmpty) {
+      selectedSize = widget.menuItem.sizes.first;
     }
   }
-  
-  double get totalPrice {
-    double customizationPrice = selectedCustomizations.values
-        .fold(0.0, (sum, option) => sum + option.additionalPrice);
-    return (widget.menuItem.price + customizationPrice) * quantity;
-  }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.menuItem.name),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
       ),
       body: Column(
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppConstants.mediumPadding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                  Container(
+                    height: 250,
+                    width: double.infinity,
                     child: CachedNetworkImage(
                       imageUrl: widget.menuItem.imageUrl,
-                      width: double.infinity,
-                      height: 200,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Container(
-                        height: 200,
-                        color: Colors.grey[300],
-                        child: const Center(
-                          child: CircularProgressIndicator(),
+                        color: Colors.grey.shade200,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppConstants.primaryColor,
+                            ),
+                          ),
                         ),
                       ),
                       errorWidget: (context, url, error) => Container(
-                        height: 200,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.error),
+                        color: Colors.grey.shade200,
+                        child: Icon(
+                          Icons.image_not_supported,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: AppConstants.mediumPadding),
-                  Text(
-                    widget.menuItem.name,
-                    style: AppConstants.titleStyle,
+                  Padding(
+                    padding: EdgeInsets.all(AppConstants.defaultPadding),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.menuItem.name,
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          widget.menuItem.description,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          '\$${basePrice.toStringAsFixed(2)}',
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: AppConstants.primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 24),
+                        if (widget.menuItem.sizes.isNotEmpty) ...[
+                          Text(
+                            'Size',
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontSize: 18,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            children: widget.menuItem.sizes.map((size) {
+                              return ChoiceChip(
+                                label: Text(size),
+                                selected: selectedSize == size,
+                                onSelected: (selected) {
+                                  if (selected) {
+                                    setState(() {
+                                      selectedSize = size;
+                                    });
+                                  }
+                                },
+                                selectedColor: AppConstants.primaryColor.withOpacity(0.2),
+                                labelStyle: TextStyle(
+                                  color: selectedSize == size
+                                      ? AppConstants.primaryColor
+                                      : AppConstants.textSecondary,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          SizedBox(height: 24),
+                        ],
+                        if (widget.menuItem.extras.isNotEmpty) ...[
+                          Text(
+                            'Extras (+\$0.50 each)',
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontSize: 18,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            children: widget.menuItem.extras.map((extra) {
+                              return FilterChip(
+                                label: Text(extra),
+                                selected: selectedExtras.contains(extra),
+                                onSelected: (selected) {
+                                  setState(() {
+                                    if (selected) {
+                                      selectedExtras.add(extra);
+                                    } else {
+                                      selectedExtras.remove(extra);
+                                    }
+                                  });
+                                },
+                                selectedColor: AppConstants.primaryColor.withOpacity(0.2),
+                                labelStyle: TextStyle(
+                                  color: selectedExtras.contains(extra)
+                                      ? AppConstants.primaryColor
+                                      : AppConstants.textSecondary,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          SizedBox(height: 24),
+                        ],
+                        Text(
+                          'Quantity',
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontSize: 18,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          children: [
+                            IconButton(
+                              onPressed: quantity > 1
+                                  ? () {
+                                      setState(() {
+                                        quantity--;
+                                      });
+                                    }
+                                  : null,
+                              icon: Icon(Icons.remove),
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.grey.shade100,
+                                foregroundColor: AppConstants.textPrimary,
+                              ),
+                            ),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: Text(
+                                quantity.toString(),
+                                style: Theme.of(context).textTheme.headlineMedium,
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  quantity++;
+                                });
+                              },
+                              icon: Icon(Icons.add),
+                              style: IconButton.styleFrom(
+                                backgroundColor: AppConstants.primaryColor.withOpacity(0.1),
+                                foregroundColor: AppConstants.primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: AppConstants.smallPadding),
-                  Text(
-                    widget.menuItem.description,
-                    style: AppConstants.subtitleStyle,
-                  ),
-                  const SizedBox(height: AppConstants.mediumPadding),
-                  Text(
-                    '\$${widget.menuItem.price.toStringAsFixed(2)}',
-                    style: AppConstants.priceStyle,
-                  ),
-                  const SizedBox(height: AppConstants.largePadding),
-                  
-                  ...widget.menuItem.customizations.map((customization) =>
-                    _buildCustomizationSection(customization)
-                  ),
-                  
-                  const SizedBox(height: AppConstants.largePadding),
-                  _buildQuantitySelector(),
                 ],
               ),
             ),
           ),
-          _buildBottomSection(),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildCustomizationSection(Customization customization) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          customization.name,
-          style: AppConstants.titleStyle.copyWith(fontSize: 18),
-        ),
-        const SizedBox(height: AppConstants.smallPadding),
-        ...customization.options.map((option) =>
-          RadioListTile<CustomizationOption>(
-            title: Text(option.name),
-            subtitle: option.additionalPrice > 0
-                ? Text('+\$${option.additionalPrice.toStringAsFixed(2)}')
-                : null,
-            value: option,
-            groupValue: selectedCustomizations[customization.name],
-            onChanged: (CustomizationOption? value) {
-              if (value != null) {
-                setState(() {
-                  selectedCustomizations[customization.name] = value;
-                });
-              }
-            },
-            activeColor: AppConstants.primaryColor,
-          ),
-        ),
-        const SizedBox(height: AppConstants.mediumPadding),
-      ],
-    );
-  }
-  
-  Widget _buildQuantitySelector() {
-    return Row(
-      children: [
-        Text(
-          'Quantity',
-          style: AppConstants.titleStyle.copyWith(fontSize: 18),
-        ),
-        const Spacer(),
-        IconButton(
-          onPressed: quantity > 1 ? () => setState(() => quantity--) : null,
-          icon: const Icon(Icons.remove),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.grey[200],
-            foregroundColor: AppConstants.textColor,
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: AppConstants.mediumPadding),
-          child: Text(
-            '$quantity',
-            style: AppConstants.titleStyle.copyWith(fontSize: 18),
-          ),
-        ),
-        IconButton(
-          onPressed: () => setState(() => quantity++),
-          icon: const Icon(Icons.add),
-          style: IconButton.styleFrom(
-            backgroundColor: AppConstants.primaryColor,
-            foregroundColor: Colors.white,
-          ),
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildBottomSection() {
-    return Container(
-      padding: const EdgeInsets.all(AppConstants.mediumPadding),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total',
-                  style: AppConstants.titleStyle.copyWith(fontSize: 18),
-                ),
-                Text(
-                  '\$${totalPrice.toStringAsFixed(2)}',
-                  style: AppConstants.priceStyle.copyWith(fontSize: 20),
+          Container(
+            padding: EdgeInsets.all(AppConstants.defaultPadding),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: Offset(0, -2),
                 ),
               ],
             ),
-            const SizedBox(height: AppConstants.mediumPadding),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _addToCart,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Total',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      Text(
+                        '\$${totalPrice.toStringAsFixed(2)}',
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          color: AppConstants.primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: const Text(
-                  'Add to Cart',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                SizedBox(width: 16),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      cartController.addToCart(
+                        menuItem: widget.menuItem,
+                        quantity: quantity,
+                        selectedSize: selectedSize,
+                        selectedExtras: selectedExtras,
+                      );
+                      Get.back();
+                    },
+                    icon: Icon(Icons.add_shopping_cart),
+                    label: Text('Add to Cart'),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
-  }
-  
-  void _addToCart() {
-    context.read<CartController>().addItem(
-      widget.menuItem,
-      quantity,
-      selectedCustomizations,
-    );
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${widget.menuItem.name} added to cart'),
-        backgroundColor: AppConstants.primaryColor,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-    
-    Navigator.of(context).pop();
   }
 }

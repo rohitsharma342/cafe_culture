@@ -1,59 +1,85 @@
-import 'package:flutter/foundation.dart';
-import '../models/cart_item.dart';
-import '../models/menu_item.dart';
+import 'package:get/get.dart';
+import 'package:cafe_culture/models/cart_item.dart';
+import 'package:cafe_culture/models/menu_item.dart';
 
-class CartController extends ChangeNotifier {
-  final List<CartItem> _items = [];
+class CartController extends GetxController {
+  final RxList<CartItem> _cartItems = <CartItem>[].obs;
   
-  List<CartItem> get items => _items;
+  List<CartItem> get cartItems => _cartItems;
   
-  int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
+  int get cartCount => _cartItems.fold(0, (sum, item) => sum + item.quantity);
   
-  double get totalAmount => _items.fold(0.0, (sum, item) => sum + item.totalPrice);
+  double get totalAmount => _cartItems.fold(0.0, (sum, item) => sum + item.itemTotal);
   
-  bool get isEmpty => _items.isEmpty;
-  
-  void addItem(MenuItem menuItem, int quantity, Map<String, CustomizationOption> customizations) {
-    final existingIndex = _items.indexWhere((item) => 
-        item.menuItem.id == menuItem.id && 
-        _compareCustomizations(item.selectedCustomizations, customizations));
+  bool get isEmpty => _cartItems.isEmpty;
+
+  void addToCart({
+    required MenuItem menuItem,
+    required int quantity,
+    String selectedSize = '',
+    List<String> selectedExtras = const [],
+  }) {
+    final String itemId = '${menuItem.id}_${selectedSize}_${selectedExtras.join('_')}';
     
-    if (existingIndex >= 0) {
-      _items[existingIndex].quantity += quantity;
+    final existingItemIndex = _cartItems.indexWhere((item) => item.id == itemId);
+    
+    if (existingItemIndex != -1) {
+      _cartItems[existingItemIndex].quantity += quantity;
+      _cartItems.refresh();
     } else {
-      _items.add(CartItem(
+      final cartItem = CartItem(
+        id: itemId,
         menuItem: menuItem,
         quantity: quantity,
-        selectedCustomizations: customizations,
-      ));
+        selectedSize: selectedSize,
+        selectedExtras: selectedExtras,
+      );
+      _cartItems.add(cartItem);
     }
-    notifyListeners();
+    
+    Get.snackbar(
+      'Added to Cart',
+      '${menuItem.name} has been added to your cart',
+      duration: Duration(seconds: 2),
+    );
   }
-  
-  void updateQuantity(int index, int newQuantity) {
-    if (newQuantity > 0) {
-      _items[index].quantity = newQuantity;
-    } else {
-      _items.removeAt(index);
+
+  void updateQuantity(String itemId, int newQuantity) {
+    if (newQuantity <= 0) {
+      removeFromCart(itemId);
+      return;
     }
-    notifyListeners();
+    
+    final itemIndex = _cartItems.indexWhere((item) => item.id == itemId);
+    if (itemIndex != -1) {
+      _cartItems[itemIndex].quantity = newQuantity;
+      _cartItems.refresh();
+    }
   }
-  
-  void removeItem(int index) {
-    _items.removeAt(index);
-    notifyListeners();
+
+  void removeFromCart(String itemId) {
+    _cartItems.removeWhere((item) => item.id == itemId);
+    Get.snackbar(
+      'Item Removed',
+      'Item has been removed from your cart',
+      duration: Duration(seconds: 2),
+    );
   }
-  
+
   void clearCart() {
-    _items.clear();
-    notifyListeners();
+    _cartItems.clear();
+    Get.snackbar(
+      'Cart Cleared',
+      'All items have been removed from your cart',
+      duration: Duration(seconds: 2),
+    );
   }
-  
-  bool _compareCustomizations(Map<String, CustomizationOption> a, Map<String, CustomizationOption> b) {
-    if (a.length != b.length) return false;
-    for (String key in a.keys) {
-      if (!b.containsKey(key) || a[key]!.name != b[key]!.name) return false;
+
+  CartItem? getCartItem(String itemId) {
+    try {
+      return _cartItems.firstWhere((item) => item.id == itemId);
+    } catch (e) {
+      return null;
     }
-    return true;
   }
 }

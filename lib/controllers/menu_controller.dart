@@ -1,158 +1,145 @@
-import 'package:flutter/foundation.dart';
-import '../models/menu_item.dart';
+import 'package:get/get.dart';
+import 'package:cafe_culture/models/menu_item.dart';
 
-class MenuController extends ChangeNotifier {
-  List<MenuItem> _allItems = [];
-  List<MenuItem> _filteredItems = [];
-  String _selectedCategory = 'All';
-  String _searchQuery = '';
-  
-  List<MenuItem> get filteredItems => _filteredItems;
-  List<String> get categories => ['All', ...{..._allItems.map((item) => item.category)}];
-  String get selectedCategory => _selectedCategory;
-  
-  MenuController() {
-    _loadMenuItems();
+class MenuController extends GetxController {
+  final RxList<MenuItem> _menuItems = <MenuItem>[].obs;
+  final RxString _selectedCategory = 'All'.obs;
+  final RxString _searchQuery = ''.obs;
+  final RxBool _isLoading = false.obs;
+
+  List<MenuItem> get menuItems => _menuItems;
+  String get selectedCategory => _selectedCategory.value;
+  String get searchQuery => _searchQuery.value;
+  bool get isLoading => _isLoading.value;
+
+  List<MenuItem> get filteredItems {
+    List<MenuItem> filtered = _menuItems;
+
+    if (_selectedCategory.value != 'All') {
+      filtered = filtered.where((item) => item.category == _selectedCategory.value).toList();
+    }
+
+    if (_searchQuery.value.isNotEmpty) {
+      filtered = filtered.where((item) {
+        return item.name.toLowerCase().contains(_searchQuery.value.toLowerCase()) ||
+               item.description.toLowerCase().contains(_searchQuery.value.toLowerCase()) ||
+               item.category.toLowerCase().contains(_searchQuery.value.toLowerCase());
+      }).toList();
+    }
+
+    return filtered;
   }
-  
-  void _loadMenuItems() {
-    _allItems = [
+
+  @override
+  void onInit() {
+    super.onInit();
+    loadMenuItems();
+  }
+
+  void loadMenuItems() {
+    _isLoading.value = true;
+    
+    // Simulated menu data
+    final List<MenuItem> sampleItems = [
       MenuItem(
         id: '1',
         name: 'Espresso',
         description: 'Rich and bold espresso shot',
-        price: 2.99,
+        price: 2.50,
         imageUrl: 'https://images.unsplash.com/photo-1510707577719-ae7c14805e3a?w=400',
         category: 'Coffee',
-        customizations: [
-          Customization(
-            name: 'Size',
-            options: [
-              CustomizationOption(name: 'Single', additionalPrice: 0.0),
-              CustomizationOption(name: 'Double', additionalPrice: 1.5),
-            ],
-          ),
-        ],
+        sizes: ['Small', 'Medium', 'Large'],
+        extras: ['Extra Shot', 'Decaf', 'Sugar'],
+        rating: 4.5,
+        reviewCount: 128,
       ),
       MenuItem(
         id: '2',
         name: 'Cappuccino',
-        description: 'Espresso with steamed milk and foam',
-        price: 4.99,
+        description: 'Creamy cappuccino with perfect foam',
+        price: 3.75,
         imageUrl: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400',
         category: 'Coffee',
-        customizations: [
-          Customization(
-            name: 'Size',
-            options: [
-              CustomizationOption(name: 'Small', additionalPrice: 0.0),
-              CustomizationOption(name: 'Medium', additionalPrice: 1.0),
-              CustomizationOption(name: 'Large', additionalPrice: 2.0),
-            ],
-          ),
-          Customization(
-            name: 'Milk Type',
-            options: [
-              CustomizationOption(name: 'Regular', additionalPrice: 0.0),
-              CustomizationOption(name: 'Oat Milk', additionalPrice: 0.5),
-              CustomizationOption(name: 'Almond Milk', additionalPrice: 0.5),
-            ],
-          ),
-        ],
+        sizes: ['Small', 'Medium', 'Large'],
+        extras: ['Extra Shot', 'Oat Milk', 'Vanilla Syrup'],
+        rating: 4.7,
+        reviewCount: 95,
       ),
       MenuItem(
         id: '3',
-        name: 'Croissant',
-        description: 'Buttery, flaky French pastry',
-        price: 3.50,
-        imageUrl: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400',
-        category: 'Pastries',
-        customizations: [
-          Customization(
-            name: 'Filling',
-            options: [
-              CustomizationOption(name: 'Plain', additionalPrice: 0.0),
-              CustomizationOption(name: 'Chocolate', additionalPrice: 0.75),
-              CustomizationOption(name: 'Almond', additionalPrice: 0.75),
-            ],
-          ),
-        ],
+        name: 'Green Tea Latte',
+        description: 'Smooth green tea with steamed milk',
+        price: 4.25,
+        imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400',
+        category: 'Tea',
+        sizes: ['Small', 'Medium', 'Large'],
+        extras: ['Honey', 'Almond Milk', 'Extra Matcha'],
+        rating: 4.3,
+        reviewCount: 67,
       ),
       MenuItem(
         id: '4',
-        name: 'Caesar Salad',
-        description: 'Fresh romaine lettuce with caesar dressing',
-        price: 8.99,
-        imageUrl: 'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=400',
-        category: 'Salads',
-        customizations: [
-          Customization(
-            name: 'Add Protein',
-            options: [
-              CustomizationOption(name: 'None', additionalPrice: 0.0),
-              CustomizationOption(name: 'Chicken', additionalPrice: 3.0),
-              CustomizationOption(name: 'Shrimp', additionalPrice: 4.0),
-            ],
-          ),
-        ],
+        name: 'Croissant',
+        description: 'Buttery, flaky French croissant',
+        price: 2.95,
+        imageUrl: 'https://images.unsplash.com/photo-1555507036-ab794f4ade2a?w=400',
+        category: 'Pastries',
+        extras: ['Butter', 'Jam', 'Honey'],
+        rating: 4.6,
+        reviewCount: 84,
       ),
       MenuItem(
         id: '5',
-        name: 'Avocado Toast',
-        description: 'Sourdough bread with fresh avocado',
-        price: 7.50,
-        imageUrl: 'https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?w=400',
-        category: 'Breakfast',
-        customizations: [
-          Customization(
-            name: 'Add-ons',
-            options: [
-              CustomizationOption(name: 'None', additionalPrice: 0.0),
-              CustomizationOption(name: 'Poached Egg', additionalPrice: 2.0),
-              CustomizationOption(name: 'Feta Cheese', additionalPrice: 1.5),
-            ],
-          ),
-        ],
+        name: 'Club Sandwich',
+        description: 'Triple-decker sandwich with turkey and bacon',
+        price: 8.50,
+        imageUrl: 'https://images.unsplash.com/photo-1553909489-cd47e0ef937f?w=400',
+        category: 'Sandwiches',
+        extras: ['Extra Bacon', 'Avocado', 'Cheese'],
+        rating: 4.4,
+        reviewCount: 112,
       ),
       MenuItem(
         id: '6',
-        name: 'Green Tea',
-        description: 'Premium organic green tea',
-        price: 3.25,
-        imageUrl: 'https://images.unsplash.com/photo-1556881286-fc6915169721?w=400',
-        category: 'Tea',
+        name: 'Chocolate Cake',
+        description: 'Rich chocolate cake with ganache',
+        price: 4.75,
+        imageUrl: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400',
+        category: 'Desserts',
+        extras: ['Ice Cream', 'Whipped Cream', 'Berries'],
+        rating: 4.8,
+        reviewCount: 156,
       ),
     ];
-    _filteredItems = List.from(_allItems);
-    notifyListeners();
+
+    Future.delayed(Duration(milliseconds: 500), () {
+      _menuItems.assignAll(sampleItems);
+      _isLoading.value = false;
+    });
   }
-  
-  void filterByCategory(String category) {
-    _selectedCategory = category;
-    _applyFilters();
+
+  void updateCategory(String category) {
+    _selectedCategory.value = category;
   }
-  
-  void searchItems(String query) {
-    _searchQuery = query.toLowerCase();
-    _applyFilters();
+
+  void updateSearchQuery(String query) {
+    _searchQuery.value = query;
   }
-  
-  void _applyFilters() {
-    _filteredItems = _allItems.where((item) {
-      final categoryMatch = _selectedCategory == 'All' || item.category == _selectedCategory;
-      final searchMatch = _searchQuery.isEmpty || 
-          item.name.toLowerCase().contains(_searchQuery) ||
-          item.description.toLowerCase().contains(_searchQuery);
-      return categoryMatch && searchMatch;
-    }).toList();
-    notifyListeners();
-  }
-  
-  MenuItem? getItemById(String id) {
+
+  MenuItem? getMenuItem(String id) {
     try {
-      return _allItems.firstWhere((item) => item.id == id);
+      return _menuItems.firstWhere((item) => item.id == id);
     } catch (e) {
       return null;
     }
+  }
+
+  List<MenuItem> getItemsByCategory(String category) {
+    if (category == 'All') return _menuItems;
+    return _menuItems.where((item) => item.category == category).toList();
+  }
+
+  void refreshMenu() {
+    loadMenuItems();
   }
 }

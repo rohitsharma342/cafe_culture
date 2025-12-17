@@ -1,47 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'screens/splash_screen.dart';
-import 'controllers/cart_controller.dart';
-import 'controllers/menu_controller.dart' as menu;
-import 'controllers/order_controller.dart';
-import 'constants/app_constants.dart';
+import 'package:get/get.dart';
+import 'package:cafe_culture/utils/app_theme.dart';
+import 'package:cafe_culture/screens/splash_screen.dart';
+import 'package:cafe_culture/controllers/cart_controller.dart';
+import 'package:cafe_culture/controllers/menu_controller.dart' as menu;
+import 'package:cafe_culture/controllers/order_controller.dart';
 
 void main() {
-  runApp(const CafeCultureApp());
+  runApp(MyApp());
 }
 
-class CafeCultureApp extends StatelessWidget {
-  const CafeCultureApp({super.key});
-
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => CartController()),
-        ChangeNotifierProvider(create: (_) => menu.MenuController()),
-        ChangeNotifierProvider(create: (_) => OrderController()),
-      ],
-      child: MaterialApp(
-        title: 'Cafe Culture',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          primaryColor: AppConstants.primaryColor,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: AppConstants.primaryColor,
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          fontFamily: 'Roboto',
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black87,
-            elevation: 0,
-            centerTitle: true,
-          ),
-          scaffoldBackgroundColor: Colors.grey[50],
-        ),
-        home: const SplashScreen(),
-      ),
+    Get.put(CartController());
+    Get.put(menu.MenuController());
+    Get.put(OrderController());
+    
+    return GetMaterialApp(
+      title: 'Cafe Culture',
+      theme: AppTheme.lightTheme,
+      home: SplashScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

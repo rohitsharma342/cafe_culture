@@ -1,296 +1,380 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import '../constants/app_constants.dart';
-import '../controllers/order_controller.dart';
-import '../models/order.dart';
+import 'package:cafe_culture/controllers/order_controller.dart';
+import 'package:cafe_culture/utils/constants.dart';
+import 'package:cafe_culture/widgets/order_status_widget.dart';
 
 class OrderTrackingScreen extends StatelessWidget {
-  const OrderTrackingScreen({super.key});
-  
+  final OrderController orderController = Get.find();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Order Tracking'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: Consumer<OrderController>(
-        builder: (context, orderController, child) {
-          final activeOrders = orderController.activeOrders;
-          
-          if (activeOrders.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.receipt_long_outlined,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  SizedBox(height: AppConstants.mediumPadding),
-                  Text(
-                    'No current orders',
-                    style: AppConstants.titleStyle,
-                  ),
-                  SizedBox(height: AppConstants.smallPadding),
-                  Text(
-                    'Place an order to track its status',
-                    style: AppConstants.subtitleStyle,
-                  ),
-                ],
-              ),
-            );
-          }
-          
-          return ListView.builder(
-            padding: const EdgeInsets.all(AppConstants.mediumPadding),
-            itemCount: activeOrders.length,
-            itemBuilder: (context, index) {
-              return _OrderCard(order: activeOrders[index]);
+        title: Text('Order Tracking'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: () {
+              Get.snackbar(
+                'Refreshed',
+                'Order status updated',
+                duration: Duration(seconds: 2),
+              );
             },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showSupportDialog(context),
-        backgroundColor: AppConstants.primaryColor,
-        icon: const Icon(Icons.support_agent, color: Colors.white),
-        label: const Text(
-          'Contact Support',
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
-    );
-  }
-  
-  void _showSupportDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Contact Support'),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(Icons.phone, color: AppConstants.primaryColor),
-                title: Text('Call Us'),
-                subtitle: Text('+1 (555) 123-4567'),
-              ),
-              ListTile(
-                leading: Icon(Icons.email, color: AppConstants.primaryColor),
-                title: Text('Email Us'),
-                subtitle: Text('support@cafeculture.com'),
-              ),
-              ListTile(
-                leading: Icon(Icons.chat, color: AppConstants.primaryColor),
-                title: Text('Live Chat'),
-                subtitle: Text('Available 24/7'),
-              ),
-            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _OrderCard extends StatefulWidget {
-  final Order order;
-  
-  const _OrderCard({required this.order});
-  
-  @override
-  State<_OrderCard> createState() => _OrderCardState();
-}
-
-class _OrderCardState extends State<_OrderCard> {
-  bool isExpanded = false;
-  
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: AppConstants.mediumPadding),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+        ],
       ),
-      child: Column(
-        children: [
-          ListTile(
-            title: Text(
-              'Order ${widget.order.id}',
-              style: AppConstants.titleStyle.copyWith(fontSize: 16),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: Obx(() {
+        final activeOrders = orderController.getActiveOrders();
+        final orderHistory = orderController.getOrderHistory();
+
+        if (!orderController.hasActiveOrders) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  DateFormat('MMM dd, yyyy - HH:mm').format(widget.order.orderTime),
-                  style: AppConstants.subtitleStyle.copyWith(fontSize: 12),
+                Icon(
+                  Icons.receipt_long_outlined,
+                  size: 80,
+                  color: Colors.grey,
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 16),
                 Text(
-                  '\$${widget.order.totalAmount.toStringAsFixed(2)}',
-                  style: AppConstants.priceStyle.copyWith(fontSize: 14),
+                  'No current orders',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Your active orders will appear here',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => Get.back(),
+                  child: Text('Browse Menu'),
                 ),
               ],
             ),
-            trailing: IconButton(
-              icon: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
-              onPressed: () {
-                setState(() {
-                  isExpanded = !isExpanded;
-                });
-              },
-            ),
-          ),
-          _buildStatusTimeline(),
-          if (isExpanded) _buildOrderDetails(),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildStatusTimeline() {
-    final statuses = [
-      OrderStatus.placed,
-      OrderStatus.preparing,
-      OrderStatus.ready,
-      OrderStatus.outForDelivery,
-      OrderStatus.delivered,
-    ];
-    
-    final currentIndex = statuses.indexOf(widget.order.status);
-    
-    return Padding(
-      padding: const EdgeInsets.all(AppConstants.mediumPadding),
-      child: Column(
-        children: [
-          Row(
-            children: statuses.map((status) {
-              final index = statuses.indexOf(status);
-              final isCompleted = index <= currentIndex;
-              final isCurrent = index == currentIndex;
-              
-              return Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: isCompleted
-                            ? AppConstants.primaryColor
-                            : Colors.grey[300],
-                        shape: BoxShape.circle,
-                        border: isCurrent
-                            ? Border.all(
-                                color: AppConstants.primaryColor,
-                                width: 2,
-                              )
-                            : null,
-                      ),
-                      child: isCompleted
-                          ? const Icon(
-                              Icons.check,
-                              size: 16,
-                              color: Colors.white,
-                            )
-                          : null,
+          );
+        }
+
+        return DefaultTabController(
+          length: 2,
+          child: Column(
+            children: [
+              Container(
+                color: Colors.white,
+                child: TabBar(
+                  labelColor: AppConstants.primaryColor,
+                  unselectedLabelColor: AppConstants.textSecondary,
+                  indicatorColor: AppConstants.primaryColor,
+                  tabs: [
+                    Tab(
+                      text: 'Active Orders (${activeOrders.length})',
                     ),
-                    if (index < statuses.length - 1)
-                      Expanded(
-                        child: Container(
-                          height: 2,
-                          color: isCompleted
-                              ? AppConstants.primaryColor
-                              : Colors.grey[300],
-                        ),
-                      ),
+                    Tab(
+                      text: 'History (${orderHistory.length})',
+                    ),
                   ],
                 ),
-              );
-            }).toList(),
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _buildActiveOrdersTab(context, activeOrders),
+                    _buildOrderHistoryTab(context, orderHistory),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: AppConstants.smallPadding),
-          Text(
-            widget.order.statusText,
-            style: AppConstants.titleStyle.copyWith(
-              fontSize: 16,
-              color: AppConstants.primaryColor,
-            ),
-          ),
-          if (widget.order.estimatedDeliveryTime != null)
-            Text(
-              'Estimated delivery: ${widget.order.estimatedDeliveryTime}',
-              style: AppConstants.subtitleStyle.copyWith(fontSize: 12),
-            ),
-        ],
-      ),
+        );
+      }),
     );
   }
-  
-  Widget _buildOrderDetails() {
-    return Container(
-      padding: const EdgeInsets.all(AppConstants.mediumPadding),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(AppConstants.borderRadius),
-          bottomRight: Radius.circular(AppConstants.borderRadius),
+
+  Widget _buildActiveOrdersTab(BuildContext context, List<dynamic> activeOrders) {
+    if (activeOrders.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.local_shipping_outlined,
+              size: 80,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'No active orders',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Place an order to see it here',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
         ),
+      );
+    }
+
+    return ListView.separated(
+      padding: EdgeInsets.all(AppConstants.defaultPadding),
+      itemCount: activeOrders.length,
+      separatorBuilder: (context, index) => SizedBox(height: 16),
+      itemBuilder: (context, index) {
+        final order = activeOrders[index];
+        return _buildOrderCard(context, order, isActive: true);
+      },
+    );
+  }
+
+  Widget _buildOrderHistoryTab(BuildContext context, List<dynamic> orderHistory) {
+    if (orderHistory.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.history,
+              size: 80,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'No order history',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Your completed orders will appear here',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: EdgeInsets.all(AppConstants.defaultPadding),
+      itemCount: orderHistory.length,
+      separatorBuilder: (context, index) => SizedBox(height: 16),
+      itemBuilder: (context, index) {
+        final order = orderHistory[index];
+        return _buildOrderCard(context, order, isActive: false);
+      },
+    );
+  }
+
+  Widget _buildOrderCard(BuildContext context, dynamic order, {required bool isActive}) {
+    final DateFormat timeFormat = DateFormat('MMM dd, yyyy - hh:mm a');
+    
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Order Items',
-            style: AppConstants.titleStyle,
-          ),
-          const SizedBox(height: AppConstants.smallPadding),
-          ...widget.order.items.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${item.quantity}x ${item.menuItem.name}',
-                      style: AppConstants.subtitleStyle,
+      child: Padding(
+        padding: EdgeInsets.all(AppConstants.defaultPadding),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Order #${order.id}',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontSize: 18,
                     ),
                   ),
-                  Text(
-                    '\$${item.totalPrice.toStringAsFixed(2)}',
-                    style: AppConstants.subtitleStyle,
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(order.status).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    order.status,
+                    style: TextStyle(
+                      color: _getStatusColor(order.status),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Ordered: ${timeFormat.format(order.orderTime)}',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            if (order.estimatedDelivery != null && isActive) ..[
+              SizedBox(height: 4),
+              Text(
+                'Estimated delivery: ${timeFormat.format(order.estimatedDelivery)}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppConstants.primaryColor,
+                ),
+              ),
+            ],
+            SizedBox(height: 12),
+            Text(
+              'Total: \$${order.totalAmount.toStringAsFixed(2)}',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (isActive) ...[
+              SizedBox(height: 16),
+              OrderStatusWidget(
+                currentStatus: order.status,
+                statuses: AppConstants.orderStatuses,
+              ),
+              SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        _showOrderDetails(context, order);
+                      },
+                      icon: Icon(Icons.info_outline),
+                      label: Text('View Details'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppConstants.primaryColor,
+                        side: BorderSide(color: AppConstants.primaryColor),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        _showContactSupport(context);
+                      },
+                      icon: Icon(Icons.support_agent),
+                      label: Text('Support'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
+                        foregroundColor: AppConstants.textPrimary,
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Order Placed':
+        return Colors.blue;
+      case 'Preparing':
+        return Colors.orange;
+      case 'Ready for Pickup':
+        return Colors.purple;
+      case 'Out for Delivery':
+        return AppConstants.primaryColor;
+      case 'Delivered':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  void _showOrderDetails(BuildContext context, dynamic order) {
+    Get.dialog(
+      AlertDialog(
+        title: Text('Order Details'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Order ID: ${order.id}'),
+            SizedBox(height: 8),
+            Text('Customer: ${order.customerName}'),
+            SizedBox(height: 8),
+            Text('Delivery Address: ${order.deliveryAddress}'),
+            SizedBox(height: 8),
+            Text('Status: ${order.status}'),
+            SizedBox(height: 8),
+            Text('Total: \$${order.totalAmount.toStringAsFixed(2)}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('Close'),
           ),
-          if (widget.order.deliveryAddress != null) ...[
-            const SizedBox(height: AppConstants.mediumPadding),
-            const Text(
-              'Delivery Address',
-              style: AppConstants.titleStyle,
+        ],
+      ),
+    );
+  }
+
+  void _showContactSupport(BuildContext context) {
+    Get.dialog(
+      AlertDialog(
+        title: Text('Contact Support'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.phone),
+              title: Text('Call Support'),
+              subtitle: Text('+1 (555) 123-4567'),
+              onTap: () {
+                Get.back();
+                Get.snackbar(
+                  'Calling Support',
+                  'Opening phone app...',
+                  duration: Duration(seconds: 2),
+                );
+              },
             ),
-            const SizedBox(height: AppConstants.smallPadding),
-            Text(
-              widget.order.deliveryAddress!,
-              style: AppConstants.subtitleStyle,
+            ListTile(
+              leading: Icon(Icons.chat),
+              title: Text('Live Chat'),
+              subtitle: Text('Chat with our support team'),
+              onTap: () {
+                Get.back();
+                Get.snackbar(
+                  'Live Chat',
+                  'Opening chat support...',
+                  duration: Duration(seconds: 2),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.email),
+              title: Text('Email Support'),
+              subtitle: Text('support@cafeculture.com'),
+              onTap: () {
+                Get.back();
+                Get.snackbar(
+                  'Email Support',
+                  'Opening email app...',
+                  duration: Duration(seconds: 2),
+                );
+              },
             ),
           ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('Cancel'),
+          ),
         ],
       ),
     );
